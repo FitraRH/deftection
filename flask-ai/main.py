@@ -23,9 +23,9 @@ except ImportError:
 try:
     from core.detection import DetectionCore
     DETECTION_CORE_AVAILABLE = True
-    print("✅ Detection core available")
+    print("Detection core available")
 except ImportError:
-    print("⚠️ Detection core not available - using simple detection mode")
+    print("Detection core not available - using simple detection mode")
     DETECTION_CORE_AVAILABLE = False
 
 
@@ -64,9 +64,9 @@ class StatelessDefectDetector:
             success = self.load_models(final_anomalib_path, final_hrnet_path)
             if success:
                 self._init_detection_core()
-                print("✅ Stateless system ready!")
+                print("Stateless system ready!")
             else:
-                print("❌ Model loading failed")
+                print("Model loading failed")
     
     def load_models(self, anomalib_path=None, hrnet_path=None):
         """Load models"""
@@ -82,7 +82,7 @@ class StatelessDefectDetector:
             try:
                 anomalib_model, hrnet_model = self.model_loader.get_models()
                 self.detection_core = DetectionCore(anomalib_model, hrnet_model, self.device)
-                print("✅ Detection core initialized")
+                print("Detection core initialized")
             except Exception as e:
                 self.logger.warning(f"Detection core initialization failed: {e}")
     
@@ -244,42 +244,42 @@ def quick_detect(image_path, anomalib_path=None, hrnet_path=None):
 # Simple test function
 def test_system():
     """Simple system test - stateless version"""
-    print("🧪 Testing STATELESS System...")
+    print("Testing STATELESS System...")
     print("=" * 50)
     
     try:
         detector = StatelessDefectDetector(auto_load=True)
         
         if detector.is_ready():
-            print("✅ System ready!")
+            print("System ready!")
             
             system_info = detector.get_system_info()
             print(f"   Device: {system_info['device']}")
-            print(f"   Models: {'✅' if system_info['models_loaded'] else '❌'}")
-            print(f"   Detection Core: {'✅' if system_info['detection_core_available'] else '❌'}")
+            print(f"   Models: {'' if system_info['models_loaded'] else '❌'}")
+            print(f"   Detection Core: {'' if system_info['detection_core_available'] else '❌'}")
             print(f"   Mode: {system_info['mode']}")
             print(f"   Persistent Storage: {system_info['persistent_storage']}")
             
             # Test API compatibility
-            print("\n🔗 Testing API server compatibility...")
+            print("\nTesting API server compatibility...")
             if hasattr(detector, 'process_image') and callable(detector.process_image):
-                print("    ✅ process_image method available")
+                print("    process_image method available")
             if hasattr(detector, 'get_system_info') and callable(detector.get_system_info):
-                print("    ✅ get_system_info method available")
+                print("    get_system_info method available")
             if hasattr(detector, 'is_ready') and callable(detector.is_ready):
-                print("    ✅ is_ready method available")
+                print("    is_ready method available")
             
             # Test create_detector function
-            print("\n🏭 Testing create_detector function...")
+            print("\nTesting create_detector function...")
             api_detector = create_detector()
             if api_detector and api_detector.is_ready():
-                print("    ✅ create_detector() works correctly")
+                print("    create_detector() works correctly")
             else:
-                print("    ⚠️ create_detector() created detector but not ready")
+                print("    create_detector() created detector but not ready")
             
             return True
         else:
-            print("❌ System not ready")
+            print("System not ready")
             return False
             
     except Exception as e:
@@ -290,30 +290,30 @@ def test_system():
 
 
 if __name__ == "__main__":
-    print("🚀 Unified Defect Detection System - STATELESS VERSION")
+    print("Unified Defect Detection System - STATELESS VERSION")
     print("=" * 70)
-    print("📝 Features:")
-    print("   ✅ No database dependencies")
-    print("   ✅ No file writing operations")
-    print("   ✅ Only logging to files")
-    print("   ✅ In-memory processing only")
-    print("   ✅ Stateless API compatible")
+    print("Features:")
+    print("   No database dependencies")
+    print("   No file writing operations")
+    print("   Only logging to files")
+    print("   In-memory processing only")
+    print("   Stateless API compatible")
     print("=" * 70)
     
     if test_system():
-        print("\n🎉 System working!")
-        print("\n📋 API Server Compatible Methods:")
+        print("\nSystem working!")
+        print("\nAPI Server Compatible Methods:")
         print("   detector = create_detector()")
         print("   result = detector.process_image(image_path)")
         print("   info = detector.get_system_info()")
         print("   ready = detector.is_ready()")
-        print("\n🛠️ Convenience Functions:")
+        print("\nConvenience Functions:")
         print("   result = quick_detect(image_path)")
-        print("\n✅ Ready for stateless API server integration!")
-        print("💾 Storage: In-memory only, no persistent data")
+        print("\nReady for stateless API server integration!")
+        print("Storage: In-memory only, no persistent data")
     else:
-        print("\n❌ System test failed. Check model paths in config.py")
-        print("💡 Make sure your model files exist and are accessible")
+        print("\nSystem test failed. Check model paths in config.py")
+        print("Make sure your model files exist and are accessible")
     
-    print("\n🔌 This main.py is STATELESS and compatible with your API server!")
+    print("\nThis main.py is STATELESS and compatible with your API server!")
     print("   API server can import: from main import StatelessDefectDetector, create_detector")

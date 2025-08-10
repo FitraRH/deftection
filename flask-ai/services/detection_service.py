@@ -203,21 +203,13 @@ class DetectionService:
     def _process_frame_fast_with_openai(self, image_path):
         """Fast frame processing with selective OpenAI analysis"""
         try:
-            # Use detector's anomaly detection first
+            # Use same detector logic as full mode for consistency
             result = self.detector.detect_anomaly(image_path)
             
-            # Only use OpenAI for borderline cases in fast mode
+            # Fast mode only skips OpenAI analysis, not core detection logic
             if result and 'anomaly_detection' in result:
-                anomaly_score = result['anomaly_detection'].get('anomaly_score', 0)
-                
-                # Only analyze with OpenAI if score is borderline (0.6-0.8 range)
-                if 0.6 <= anomaly_score <= 0.8:
-                    # Quick OpenAI analysis for borderline cases
-                    from config import OPENAI_API_KEY
-                    if OPENAI_API_KEY and hasattr(self.detector, 'detection_core'):
-                        openai_analysis = self.detector.detection_core._analyze_anomaly_with_openai(image_path, result['anomaly_detection'])
-                        if openai_analysis:
-                            result['openai_analysis'] = openai_analysis
+                # Keep the same decision logic as full processing
+                pass  # Don't modify the decision
             
             return result
             

@@ -183,9 +183,17 @@ class PatchCoreInferencer:
         distances = torch.cdist(features_flat, memory_tensor)
         min_distances = torch.min(distances, dim=1)[0]
         
-        # Calculate and normalize anomaly score
+        # Calculate and normalize anomaly score using proper normalization
         anomaly_score = float(torch.mean(min_distances).cpu().item())
-        anomaly_score = min(1.0, max(0.0, anomaly_score / 100.0))
+        
+        # Use memory bank median distance for normalization instead of fixed 100
+        if not hasattr(self, 'score_normalizer'):
+            sample_size = min(100, memory_tensor.shape[0])
+            memory_distances = torch.cdist(memory_tensor[:sample_size], memory_tensor[:sample_size])
+            self.score_normalizer = torch.median(memory_distances[memory_distances > 0]).item()
+        
+        anomaly_score = anomaly_score / self.score_normalizer
+        anomaly_score = min(1.0, max(0.0, anomaly_score))
         
         return anomaly_score
 
