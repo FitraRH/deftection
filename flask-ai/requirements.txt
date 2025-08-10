@@ -1,0 +1,26 @@
+# requirements.txt - Stateless Version
+# Core ML and CV dependencies
+torch
+torchvision
+opencv-python
+numpy
+albumentations
+anomalib>=1.0.1
+Pillow
+scikit-learn
+scikit-image
+matplotlib
+scipy
+
+# API dependencies
+flask
+flask-cors
+
+# System monitoring (optional)
+psutil
+
+# Removed dependencies for stateless operation:
+# - pandas (used for database exports)
+# - openpyxl (used for Excel exports) 
+# - reportlab (used for PDF generation)
+# - sqlite3 (built-in, but not used in stateless mode)

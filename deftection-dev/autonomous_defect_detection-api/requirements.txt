@@ -1,0 +1,17 @@
+torch
+torchvision
+opencv-python
+numpy
+albumentations
+anomalib>=1.0.1
+Pillow
+scikit-learn
+scikit-image
+matplotlib
+scipy
+flask
+flask-cors
+pandas
+psutil
+openpyxl
+reportlab
