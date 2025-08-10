@@ -11,6 +11,8 @@ scikit-learn
 scikit-image
 matplotlib
 scipy
+openai
+python-dotenv
 
 # API dependencies
 flask

@@ -1,8 +1,6 @@
-# controllers/detection_controller.py - Stateless Version
+# controllers/detection_controller.py - Enhanced with OpenAI
 """
-Stateless Detection Controller for JSON API
-Handles detection-related requests and responses
-No database operations, no file saving
+Detection Controller with OpenAI-enhanced responses
 """
 
 from flask import jsonify
@@ -16,11 +14,7 @@ from datetime import datetime
 
 
 class DetectionController:
-    """
-    Stateless Detection Controller
-    Handles request processing and response formatting
-    No persistent storage, only in-memory operations
-    """
+    """Detection Controller with OpenAI integration"""
     
     def __init__(self, detection_service):
         self.detection_service = detection_service
@@ -36,7 +30,7 @@ class DetectionController:
         }
     
     def health_check(self):
-        """Health check endpoint"""
+        """Health check with OpenAI status"""
         try:
             status = self.detection_service.get_health_status()
             return jsonify({
@@ -44,7 +38,7 @@ class DetectionController:
                 'timestamp': datetime.now().isoformat(),
                 'services': status,
                 'api_version': '1.0.0',
-                'mode': 'stateless'
+                'mode': 'stateless_with_openai'
             })
         except Exception as e:
             self.logger.error(f"Health check failed: {e}")
@@ -55,11 +49,10 @@ class DetectionController:
             }), 500
     
     def get_system_info(self):
-        """Get detailed system information"""
+        """Get system information including OpenAI integration"""
         try:
             info = self.detection_service.get_system_information()
-            info['mode'] = 'stateless'
-            info['persistent_storage'] = False
+            info['mode'] = 'stateless_with_openai'
             
             return jsonify({
                 'status': 'success',
@@ -78,8 +71,7 @@ class DetectionController:
         """Get current system status"""
         try:
             status = self.detection_service.get_current_status()
-            status['mode'] = 'stateless'
-            status['storage_mode'] = 'in-memory-only'
+            status['mode'] = 'stateless_with_openai'
             
             return jsonify({
                 'status': 'success',
@@ -95,18 +87,18 @@ class DetectionController:
             }), 500
     
     def process_image(self, request):
-        """Process single image for defect detection - Stateless"""
+        """Process single image with OpenAI analysis"""
         start_time = time.time()
         temp_file = None
         
         try:
-            self.logger.info(f"Processing image request - Method: {request.method}")
+            self.logger.info(f"Processing image with OpenAI analysis - Method: {request.method}")
             
-            # Handle both form data and JSON properly
+            # Handle both form data and JSON
             image_data = None
             filename = None
             
-            # Try form data first (multipart/form-data)
+            # Try form data first
             if request.files and 'image' in request.files:
                 self.logger.info("Processing as form data")
                 file = request.files['image']
@@ -120,7 +112,7 @@ class DetectionController:
                 image_data = file.read()
                 filename = file.filename or f"upload_{int(time.time())}.jpg"
                 
-            # Try JSON data (application/json)
+            # Try JSON data
             elif request.json and 'image_base64' in request.json:
                 self.logger.info("Processing as JSON base64")
                 base64_data = request.json['image_base64']
@@ -138,15 +130,15 @@ class DetectionController:
                 
                 filename = request.json.get('filename', f"upload_{int(time.time())}.jpg")
             
-            # If no image data found
+            # Validate image data
             if not image_data:
                 return jsonify({
                     'status': 'error',
-                    'error': 'No image provided. Use form-data with "image" field or JSON with "image_base64"',
+                    'error': 'No image provided',
                     'timestamp': datetime.now().isoformat()
                 }), 400
             
-            # Validate file size (5MB limit)
+            # Validate file size
             if len(image_data) > 5 * 1024 * 1024:
                 return jsonify({
                     'status': 'error',
@@ -156,12 +148,12 @@ class DetectionController:
             
             self.logger.info(f"Processing image - filename: {filename}, size: {len(image_data)} bytes")
             
-            # Create temporary file for processing
+            # Create temporary file
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
             temp_file.write(image_data)
             temp_file.close()
             
-            # Process image
+            # Process image with OpenAI analysis
             result = self.detection_service.process_single_image(image_data, filename, temp_file.name)
             
             if not result:
@@ -174,16 +166,16 @@ class DetectionController:
             processing_time = time.time() - start_time
             result['processing_time'] = processing_time
             
-            # Format response (stateless)
-            response = self._format_detection_response(result, include_annotation=True)
+            # Format response with OpenAI insights
+            response = self._format_detection_response_with_openai(result, include_annotation=True)
             
-            self.logger.info(f"Image processed successfully - Decision: {result.get('final_decision')}")
+            self.logger.info(f"Image processed with OpenAI - Decision: {result.get('final_decision')}")
             
             return jsonify({
                 'status': 'success',
                 'data': response,
                 'timestamp': datetime.now().isoformat(),
-                'mode': 'stateless'
+                'mode': 'stateless_with_openai'
             })
             
         except Exception as e:
@@ -196,7 +188,6 @@ class DetectionController:
             }), 500
         
         finally:
-            # Clean up temporary file
             if temp_file and os.path.exists(temp_file.name):
                 try:
                     os.unlink(temp_file.name)
@@ -204,16 +195,15 @@ class DetectionController:
                     self.logger.warning(f"Failed to cleanup temp file: {e}")
     
     def process_batch(self, request):
-        """Process batch of images - Stateless"""
+        """Process batch with OpenAI analysis"""
         start_time = time.time()
         temp_files = []
         
         try:
-            # Validate batch request
             if not request.json or 'images' not in request.json:
                 return jsonify({
                     'status': 'error',
-                    'error': 'No images array provided in JSON body',
+                    'error': 'No images array provided',
                     'timestamp': datetime.now().isoformat()
                 }), 400
             
@@ -225,7 +215,7 @@ class DetectionController:
                     'timestamp': datetime.now().isoformat()
                 }), 400
             
-            self.logger.info(f"Processing batch of {len(images_data)} images")
+            self.logger.info(f"Processing batch of {len(images_data)} images with OpenAI")
             
             # Process each image
             results = []
@@ -247,7 +237,7 @@ class DetectionController:
                     temp_file.close()
                     temp_files.append(temp_file.name)
                     
-                    # Process image
+                    # Process image with OpenAI
                     result = self.detection_service.process_single_image(image_data, filename, temp_file.name)
                     if result:
                         results.append(result)
@@ -258,16 +248,16 @@ class DetectionController:
             
             processing_time = time.time() - start_time
             
-            # Format response
-            response = self._format_batch_response(results, processing_time)
+            # Format batch response with OpenAI insights
+            response = self._format_batch_response_with_openai(results, processing_time)
             
-            self.logger.info(f"Batch processed - {len(results)} successful results")
+            self.logger.info(f"Batch processed with OpenAI - {len(results)} results")
             
             return jsonify({
                 'status': 'success',
                 'data': response,
                 'timestamp': datetime.now().isoformat(),
-                'mode': 'stateless'
+                'mode': 'stateless_with_openai'
             })
             
         except Exception as e:
@@ -279,7 +269,6 @@ class DetectionController:
             }), 500
         
         finally:
-            # Clean up all temporary files
             for temp_file in temp_files:
                 try:
                     if os.path.exists(temp_file):
@@ -287,85 +276,18 @@ class DetectionController:
                 except Exception as e:
                     self.logger.warning(f"Failed to cleanup temp file: {e}")
     
-    def get_detection_thresholds(self):
-        """Get current detection thresholds from memory"""
-        try:
-            return jsonify({
-                'status': 'success',
-                'data': self.config['thresholds'],
-                'last_updated': self.config['last_updated'],
-                'timestamp': datetime.now().isoformat(),
-                'mode': 'stateless'
-            })
-        except Exception as e:
-            self.logger.error(f"Error getting thresholds: {e}")
-            return jsonify({
-                'status': 'error',
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }), 500
-    
-    def update_detection_thresholds(self, request):
-        """Update detection thresholds in memory"""
-        try:
-            new_thresholds = request.json
-            if not new_thresholds:
-                return jsonify({
-                    'status': 'error',
-                    'error': 'No threshold data provided',
-                    'timestamp': datetime.now().isoformat()
-                }), 400
-            
-            # Validate thresholds
-            for key, value in new_thresholds.items():
-                if key in ['anomaly_threshold', 'defect_confidence_threshold']:
-                    if not isinstance(value, (int, float)) or not (0 <= value <= 1):
-                        return jsonify({
-                            'status': 'error',
-                            'error': f'{key} must be a number between 0 and 1',
-                            'timestamp': datetime.now().isoformat()
-                        }), 400
-            
-            # Update in-memory configuration
-            self.config['thresholds'].update(new_thresholds)
-            self.config['last_updated'] = datetime.now().isoformat()
-            
-            # Update detection service thresholds
-            self.detection_service.update_thresholds(new_thresholds)
-            
-            self.logger.info(f"Thresholds updated: {new_thresholds}")
-            
-            return jsonify({
-                'status': 'success',
-                'data': {
-                    'message': 'Thresholds updated successfully (in-memory)',
-                    'new_thresholds': self.config['thresholds']
-                },
-                'timestamp': datetime.now().isoformat(),
-                'mode': 'stateless'
-            })
-                
-        except Exception as e:
-            self.logger.error(f"Error updating thresholds: {e}")
-            return jsonify({
-                'status': 'error',
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }), 500
-    
     def process_frame(self, request):
-        """Process single frame for fast real-time detection - Base64 only"""
+        """Process frame with OpenAI analysis (optimized)"""
         start_time = time.time()
         temp_file = None
         
         try:
-            self.logger.info("Processing frame request (fast mode)")
+            self.logger.info("Processing frame with OpenAI (fast mode)")
             
-            # Only accept JSON with base64 data for frames
             if not request.json or 'frame_base64' not in request.json:
                 return jsonify({
                     'status': 'error',
-                    'error': 'No frame_base64 data provided in JSON body',
+                    'error': 'No frame_base64 data provided',
                     'timestamp': datetime.now().isoformat()
                 }), 400
             
@@ -384,7 +306,6 @@ class DetectionController:
             
             filename = request.json.get('filename', f"frame_{int(time.time())}.jpg")
             
-            # Validate file size (5MB limit)
             if len(image_data) > 5 * 1024 * 1024:
                 return jsonify({
                     'status': 'error',
@@ -392,14 +313,12 @@ class DetectionController:
                     'timestamp': datetime.now().isoformat()
                 }), 400
             
-            self.logger.info(f"Processing frame - filename: {filename}, size: {len(image_data)} bytes")
-            
-            # Create temporary file for processing
+            # Create temporary file
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
             temp_file.write(image_data)
             temp_file.close()
             
-            # Fast frame processing (optimized settings)
+            # Process frame with OpenAI (fast mode)
             fast_mode = request.json.get('fast_mode', True)
             include_annotation = request.json.get('include_annotation', True)
             
@@ -419,15 +338,15 @@ class DetectionController:
             result['processing_time'] = processing_time
             
             # Format response for frame processing
-            response = self._format_frame_response(result)
+            response = self._format_frame_response_with_openai(result)
             
-            self.logger.info(f"Frame processed successfully - Decision: {result.get('final_decision')}")
+            self.logger.info(f"Frame processed with OpenAI - Decision: {result.get('final_decision')}")
             
             return jsonify({
                 'status': 'success',
                 'data': response,
                 'timestamp': datetime.now().isoformat(),
-                'mode': 'stateless_frame'
+                'mode': 'stateless_frame_with_openai'
             })
             
         except Exception as e:
@@ -440,15 +359,80 @@ class DetectionController:
             }), 500
         
         finally:
-            # Clean up temporary file
             if temp_file and os.path.exists(temp_file.name):
                 try:
                     os.unlink(temp_file.name)
                 except Exception as e:
                     self.logger.warning(f"Failed to cleanup temp file: {e}")
     
-    def _format_detection_response(self, result, include_annotation=True):
-        """Format single image detection response"""
+    def get_detection_thresholds(self):
+        """Get current detection thresholds"""
+        try:
+            return jsonify({
+                'status': 'success',
+                'data': self.config['thresholds'],
+                'last_updated': self.config['last_updated'],
+                'timestamp': datetime.now().isoformat(),
+                'mode': 'stateless_with_openai'
+            })
+        except Exception as e:
+            self.logger.error(f"Error getting thresholds: {e}")
+            return jsonify({
+                'status': 'error',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }), 500
+    
+    def update_detection_thresholds(self, request):
+        """Update detection thresholds"""
+        try:
+            new_thresholds = request.json
+            if not new_thresholds:
+                return jsonify({
+                    'status': 'error',
+                    'error': 'No threshold data provided',
+                    'timestamp': datetime.now().isoformat()
+                }), 400
+            
+            # Validate thresholds
+            for key, value in new_thresholds.items():
+                if key in ['anomaly_threshold', 'defect_confidence_threshold']:
+                    if not isinstance(value, (int, float)) or not (0 <= value <= 1):
+                        return jsonify({
+                            'status': 'error',
+                            'error': f'{key} must be a number between 0 and 1',
+                            'timestamp': datetime.now().isoformat()
+                        }), 400
+            
+            # Update configuration
+            self.config['thresholds'].update(new_thresholds)
+            self.config['last_updated'] = datetime.now().isoformat()
+            
+            # Update detection service
+            self.detection_service.update_thresholds(new_thresholds)
+            
+            self.logger.info(f"Thresholds updated: {new_thresholds}")
+            
+            return jsonify({
+                'status': 'success',
+                'data': {
+                    'message': 'Thresholds updated successfully',
+                    'new_thresholds': self.config['thresholds']
+                },
+                'timestamp': datetime.now().isoformat(),
+                'mode': 'stateless_with_openai'
+            })
+                
+        except Exception as e:
+            self.logger.error(f"Error updating thresholds: {e}")
+            return jsonify({
+                'status': 'error',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }), 500
+    
+    def _format_detection_response_with_openai(self, result, include_annotation=True):
+        """Format detection response including OpenAI insights"""
         response = {
             'final_decision': result.get('final_decision'),
             'processing_time': result.get('processing_time'),
@@ -465,10 +449,33 @@ class DetectionController:
                 'defect_types_found': result.get('detected_defect_types', []),
                 'processing_status': 'completed'
             },
-            'mode': 'stateless'
+            'mode': 'stateless_with_openai'
         }
         
-        # Include annotated image if available and requested
+        # Add OpenAI analysis including bounding box validation
+        anomaly_openai = result.get('anomaly_detection', {}).get('openai_analysis')
+        defect_openai = result.get('defect_classification', {}).get('openai_analysis')
+        
+        if anomaly_openai or defect_openai:
+            response['openai_analysis'] = {
+                'anomaly_layer': anomaly_openai,
+                'defect_layer': defect_openai,
+                'overall_confidence': max(
+                    anomaly_openai.get('confidence_percentage', 0) if anomaly_openai else 0,
+                    defect_openai.get('confidence_percentage', 0) if defect_openai else 0
+                )
+            }
+            
+            # Add bounding box validation info if available
+            if defect_openai and 'bbox_validation' in defect_openai:
+                response['bounding_box_validation'] = {
+                    'openai_confidence': defect_openai['bbox_validation']['confidence'],
+                    'spatial_accuracy': defect_openai['bbox_validation']['spatial_accuracy'],
+                    'validated_regions': defect_openai['bbox_validation']['validated_regions'],
+                    'analysis_notes': 'OpenAI validated bounding box positions against visual inspection'
+                }
+        
+        # Include annotated image
         if include_annotation and result.get('annotated_image_base64'):
             response['annotated_image'] = {
                 'base64': result['annotated_image_base64'],
@@ -478,8 +485,8 @@ class DetectionController:
         
         return response
     
-    def _format_frame_response(self, result):
-        """Format frame processing response (optimized for speed)"""
+    def _format_frame_response_with_openai(self, result):
+        """Format frame response with OpenAI insights"""
         response = {
             'final_decision': result.get('final_decision'),
             'processing_time': result.get('processing_time'),
@@ -488,10 +495,15 @@ class DetectionController:
             'defect_count': len(result.get('detected_defect_types', [])),
             'confidence_level': self._calculate_confidence_level(result),
             'is_defective': result.get('final_decision') == 'DEFECT',
-            'mode': 'stateless_frame'
+            'mode': 'stateless_frame_with_openai'
         }
         
-        # Include annotated image if available
+        # Add OpenAI confidence if available
+        openai_analysis = result.get('openai_analysis')
+        if openai_analysis:
+            response['openai_confidence'] = openai_analysis.get('confidence_percentage', 0)
+        
+        # Include annotated image
         if result.get('annotated_image_base64'):
             response['annotated_image'] = {
                 'base64': result['annotated_image_base64'],
@@ -501,11 +513,24 @@ class DetectionController:
         
         return response
     
-    def _format_batch_response(self, results, total_processing_time):
-        """Format batch processing response"""
+    def _format_batch_response_with_openai(self, results, total_processing_time):
+        """Format batch response with OpenAI insights"""
         total_images = len(results)
         defective_count = sum(1 for r in results if r.get('final_decision') == 'DEFECT')
         good_count = sum(1 for r in results if r.get('final_decision') == 'GOOD')
+        
+        # Calculate OpenAI confidence statistics
+        openai_confidences = []
+        for result in results:
+            anomaly_openai = result.get('anomaly_detection', {}).get('openai_analysis', {})
+            defect_openai = result.get('defect_classification', {}).get('openai_analysis', {})
+            
+            max_confidence = max(
+                anomaly_openai.get('confidence_percentage', 0),
+                defect_openai.get('confidence_percentage', 0)
+            )
+            if max_confidence > 0:
+                openai_confidences.append(max_confidence)
         
         return {
             'summary': {
@@ -513,12 +538,16 @@ class DetectionController:
                 'good_products': good_count,
                 'defective_products': defective_count,
                 'defect_rate': (defective_count / total_images * 100) if total_images > 0 else 0,
-                'success_rate': 100.0,  # All processed successfully if we got here
+                'success_rate': 100.0,
                 'total_processing_time': total_processing_time,
-                'avg_processing_time': total_processing_time / total_images if total_images > 0 else 0
+                'avg_processing_time': total_processing_time / total_images if total_images > 0 else 0,
+                'openai_analysis': {
+                    'analyzed_images': len(openai_confidences),
+                    'avg_confidence': sum(openai_confidences) / len(openai_confidences) if openai_confidences else 0
+                }
             },
-            'results': [self._format_detection_response(r) for r in results],
-            'mode': 'stateless'
+            'results': [self._format_detection_response_with_openai(r) for r in results],
+            'mode': 'stateless_with_openai'
         }
     
     def _calculate_confidence_level(self, result):
@@ -535,7 +564,7 @@ class DetectionController:
                 return "medium"
             else:
                 return "low"
-        else:  # DEFECT
+        else:
             if score > 0.9:
                 return "very_high"
             elif score > 0.8:

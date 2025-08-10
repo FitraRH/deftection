@@ -1,8 +1,6 @@
-# services/detection_service.py - Stateless Version
+# services/detection_service.py - Enhanced with OpenAI
 """
-Stateless Detection Service - Business Logic Layer
-Handles all detection-related business logic
-No database, no file writing, only in-memory processing
+Detection Service with OpenAI integration for enhanced analysis
 """
 
 import os
@@ -12,23 +10,14 @@ import tempfile
 import time
 import logging
 from datetime import datetime
-
-# Import existing modules from your project structure
 from main import create_detector
 
 
 class DetectionService:
-    """
-    Stateless Detection Service - Core business logic for defect detection
-    Utilizes existing project components without modification
-    No persistent storage, only in-memory operations
-    """
+    """Detection Service with OpenAI-enhanced analysis"""
     
     def __init__(self):
-        # Initialize existing components
         self.detector = None
-        
-        # Service state (in-memory only)
         self.is_initialized = False
         self.initialization_error = None
         
@@ -45,64 +34,73 @@ class DetectionService:
         self._initialize_components()
     
     def _initialize_components(self):
-        """Initialize all detection components using existing code"""
+        """Initialize detection components with OpenAI support"""
         try:
-            self.logger.info("Initializing stateless detection service components...")
+            self.logger.info("Initializing detection service with OpenAI integration...")
             
-            # Initialize main detector (from your existing main.py)
+            # Initialize main detector
             self.detector = create_detector()
             
             if not self.detector or not self.detector.is_ready():
                 raise RuntimeError("Main detector initialization failed")
             
             self.is_initialized = True
-            self.logger.info("Stateless detection service initialization completed")
+            self.logger.info("Detection service with OpenAI integration ready")
             
         except Exception as e:
             self.initialization_error = str(e)
-            self.logger.error(f"Stateless detection service initialization failed: {e}")
+            self.logger.error(f"Detection service initialization failed: {e}")
             self.is_initialized = False
     
     def get_health_status(self):
-        """Get health status of all components"""
+        """Get health status including OpenAI availability"""
+        from config import OPENAI_API_KEY
+        
         return {
             'detector': {
                 'available': self.detector is not None,
                 'ready': self.detector.is_ready() if self.detector else False,
                 'status': 'operational' if self.detector and self.detector.is_ready() else 'not_ready'
             },
+            'openai': {
+                'available': bool(OPENAI_API_KEY),
+                'status': 'operational' if OPENAI_API_KEY else 'not_configured'
+            },
             'overall_status': 'healthy' if self.is_initialized else 'degraded',
             'initialization_error': self.initialization_error,
-            'mode': 'stateless',
-            'storage': 'in-memory-only'
+            'mode': 'stateless_with_openai'
         }
     
     def get_system_information(self):
-        """Get detailed system information using existing detector methods"""
+        """Get system information including OpenAI integration status"""
         if not self.detector:
             return {
                 'status': 'not_initialized',
                 'error': 'Detector not available',
-                'mode': 'stateless'
+                'mode': 'stateless_with_openai'
             }
         
         try:
-            # Use existing detector's get_system_info method
+            from config import OPENAI_API_KEY, OPENAI_MODEL
+            
             system_info = self.detector.get_system_info()
             
-            # Add service-specific information
+            # Add OpenAI integration info
             system_info.update({
                 'service_status': 'operational' if self.is_initialized else 'degraded',
+                'openai_integration': {
+                    'enabled': bool(OPENAI_API_KEY),
+                    'model': OPENAI_MODEL if OPENAI_API_KEY else None,
+                    'features': ['anomaly_analysis', 'defect_analysis'] if OPENAI_API_KEY else []
+                },
                 'components': {
                     'main_detector': True,
-                    'database': False,  # Stateless
-                    'file_storage': False,  # Stateless
-                    'performance_tracker': False  # Stateless
+                    'openai_analyzer': bool(OPENAI_API_KEY),
+                    'database': False,
+                    'file_storage': False
                 },
                 'api_version': '1.0.0',
-                'mode': 'stateless',
-                'persistent_storage': False,
-                'in_memory_config': True
+                'mode': 'stateless_with_openai'
             })
             
             return system_info
@@ -112,51 +110,47 @@ class DetectionService:
             return {
                 'status': 'error',
                 'error': str(e),
-                'mode': 'stateless',
-                'fallback_info': {
-                    'device': 'unknown',
-                    'models_loaded': False,
-                    'system_ready': False
-                }
+                'mode': 'stateless_with_openai'
             }
     
     def get_current_status(self):
         """Get current system status"""
+        from config import OPENAI_API_KEY
+        
         return {
             'system_ready': self.is_initialized,
             'detector_ready': self.detector.is_ready() if self.detector else False,
+            'openai_ready': bool(OPENAI_API_KEY),
             'processing_capabilities': {
                 'single_image': self.detector is not None,
                 'batch_processing': self.detector is not None,
-                'video_processing': False,  # Disabled for stateless
-                'realtime_processing': False  # Disabled for stateless
+                'openai_analysis': bool(OPENAI_API_KEY),
+                'enhanced_analysis': bool(OPENAI_API_KEY)
             },
             'current_load': self._get_current_load(),
             'memory_usage': self._get_memory_usage(),
-            'mode': 'stateless',
-            'storage_mode': 'in-memory-only',
+            'mode': 'stateless_with_openai',
             'last_check': datetime.now().isoformat()
         }
     
     def process_single_image(self, image_data, filename, temp_file_path=None, include_annotation=True):
-        """Process single image using existing detector"""
+        """Process single image with OpenAI-enhanced analysis"""
         if not self.is_initialized:
             raise RuntimeError("Detection service not initialized")
         
         try:
-            self.logger.info(f"Processing single image: {filename}")
+            self.logger.info(f"Processing image with OpenAI analysis: {filename}")
             
             # Use temporary file path if provided, otherwise create one
             if temp_file_path:
                 image_path = temp_file_path
             else:
-                # Create temporary file
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
                 temp_file.write(image_data)
                 temp_file.close()
                 image_path = temp_file.name
             
-            # Process using existing detector
+            # Process using existing detector (now with OpenAI integration)
             result = self.detector.process_image(image_path)
             
             # Generate annotated image if requested
@@ -170,28 +164,27 @@ class DetectionService:
                 os.remove(image_path)
             
             if result:
-                self.logger.info(f"Image processed successfully - Decision: {result.get('final_decision')}")
+                self.logger.info(f"Image processed with OpenAI analysis - Decision: {result.get('final_decision')}")
             
             return result
             
         except Exception as e:
             self.logger.error(f"Error processing image: {e}")
-            # Cleanup on error
             if not temp_file_path and 'image_path' in locals() and os.path.exists(image_path):
                 os.remove(image_path)
             raise
     
     def process_frame(self, image_data, filename, temp_file_path, fast_mode=True, include_annotation=True):
-        """Process frame with optimizations for speed"""
+        """Process frame with OpenAI analysis (optimized for real-time)"""
         if not self.is_initialized:
             raise RuntimeError("Detection service not initialized")
         
         try:
-            self.logger.info(f"Processing frame (fast mode: {fast_mode}): {filename}")
+            self.logger.info(f"Processing frame with OpenAI (fast: {fast_mode}): {filename}")
             
-            # Fast mode processing - optimized settings
+            # For fast mode, limit OpenAI analysis to critical decisions only
             if fast_mode:
-                result = self._process_frame_fast(temp_file_path)
+                result = self._process_frame_fast_with_openai(temp_file_path)
             else:
                 result = self.detector.process_image(temp_file_path)
             
@@ -201,23 +194,31 @@ class DetectionService:
                 if annotated_base64:
                     result['annotated_image_base64'] = annotated_base64
             
-            if result:
-                self.logger.info(f"Frame processed successfully - Decision: {result.get('final_decision')}")
-            
             return result
             
         except Exception as e:
             self.logger.error(f"Error processing frame: {e}")
             raise
     
-    def _process_frame_fast(self, image_path):
-        """Fast frame processing with optimized settings"""
+    def _process_frame_fast_with_openai(self, image_path):
+        """Fast frame processing with selective OpenAI analysis"""
         try:
-            # Use simple anomaly detection only for speed
+            # Use detector's anomaly detection first
             result = self.detector.detect_anomaly(image_path)
             
-            # Skip detailed defect classification for speed if needed
-            # Only do basic anomaly detection
+            # Only use OpenAI for borderline cases in fast mode
+            if result and 'anomaly_detection' in result:
+                anomaly_score = result['anomaly_detection'].get('anomaly_score', 0)
+                
+                # Only analyze with OpenAI if score is borderline (0.6-0.8 range)
+                if 0.6 <= anomaly_score <= 0.8:
+                    # Quick OpenAI analysis for borderline cases
+                    from config import OPENAI_API_KEY
+                    if OPENAI_API_KEY and hasattr(self.detector, 'detection_core'):
+                        openai_analysis = self.detector.detection_core._analyze_anomaly_with_openai(image_path, result['anomaly_detection'])
+                        if openai_analysis:
+                            result['openai_analysis'] = openai_analysis
+            
             return result
             
         except Exception as e:
@@ -225,38 +226,30 @@ class DetectionService:
             return None
     
     def _generate_annotated_image(self, image_path, result, fast_mode=False):
-        """Generate base64 encoded annotated image using original style"""
+        """Generate annotated image with OpenAI insights"""
         try:
-            # Use the stateless visualization utility
             from utils.stateless_visualization import create_annotated_image_base64
             return create_annotated_image_base64(image_path, result)
             
         except ImportError:
-            # Fallback to local implementation if utils not available
             import cv2
             import base64
             
-            # Load original image
             image = cv2.imread(image_path)
             if image is None:
-                self.logger.warning(f"Could not load image for annotation: {image_path}")
                 return None
             
-            # Create annotated version using original style
-            annotated_image = self._annotate_image(image, result, fast_mode=fast_mode)
+            annotated_image = self._annotate_image_with_openai_insights(image, result, fast_mode)
             
-            # Encode to base64
             _, buffer = cv2.imencode('.jpg', annotated_image, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            image_base64 = base64.b64encode(buffer).decode('utf-8')
-            
-            return image_base64
+            return base64.b64encode(buffer).decode('utf-8')
             
         except Exception as e:
             self.logger.error(f"Error generating annotated image: {e}")
             return None
     
-    def _annotate_image(self, image, result, fast_mode=False):
-        """Add annotations to image based on detection results - using original style"""
+    def _annotate_image_with_openai_insights(self, image, result, fast_mode=False):
+        """Add annotations including OpenAI insights"""
         try:
             import cv2
             from config import DEFECT_COLORS, SPECIFIC_DEFECT_CLASSES
@@ -268,55 +261,47 @@ class DetectionService:
             decision = result.get('final_decision', 'UNKNOWN')
             anomaly_score = result.get('anomaly_detection', {}).get('anomaly_score', 0.0)
             
-            # Add border based on decision (similar to original code)
+            # Add border based on decision
             if decision == 'GOOD':
-                # Add green border for good products
                 annotated = cv2.copyMakeBorder(annotated, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=(0, 255, 0))
                 cv2.putText(annotated, "GOOD", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
             elif decision == 'DEFECT':
-                # Add red border for defective products
                 annotated = cv2.copyMakeBorder(annotated, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=(0, 0, 255))
                 cv2.putText(annotated, "DEFECT", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3)
                 
-                # Draw defect bounding boxes if available (always draw, no mode check)
+                # Draw defect bounding boxes if available
                 if result.get('defect_classification'):
                     self._draw_bounding_boxes(annotated, result['defect_classification'])
-            else:
-                # Add yellow border for unknown
-                annotated = cv2.copyMakeBorder(annotated, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=(0, 255, 255))
-                cv2.putText(annotated, "UNKNOWN", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 3)
             
-            # Add processing info (similar to original video processor)
+            # Add OpenAI confidence if available
+            openai_analysis = result.get('anomaly_detection', {}).get('openai_analysis') or result.get('defect_classification', {}).get('openai_analysis')
+            if openai_analysis and 'confidence_percentage' in openai_analysis:
+                cv2.putText(annotated, f"AI Confidence: {openai_analysis['confidence_percentage']}%", 
+                           (20, height - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+            
+            # Add processing info
             cv2.putText(annotated, f"Score: {anomaly_score:.3f}", (20, height - 30),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            
-            # Add timestamp
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            cv2.putText(annotated, timestamp, (width - 120, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
             
             return annotated
             
         except Exception as e:
             self.logger.error(f"Error annotating image: {e}")
-            return image  # Return original image if annotation fails
+            return image
     
     def _draw_bounding_boxes(self, image, defect_classification):
-        """Draw bounding boxes for detected defects - using original style"""
+        """Draw bounding boxes for detected defects"""
         try:
             import cv2
             from config import DEFECT_COLORS, SPECIFIC_DEFECT_CLASSES
             
-            # Use enhanced detection analysis if available
             defect_analysis = defect_classification.get('defect_analysis', {})
             bounding_boxes = defect_analysis.get('bounding_boxes', {})
             
             if not bounding_boxes:
-                # Fallback to basic bounding boxes
                 bounding_boxes = defect_classification.get('bounding_boxes', {})
             
             for defect_type, boxes in bounding_boxes.items():
-                # Get color from config or use default
                 defect_class_id = None
                 for class_id, class_name in SPECIFIC_DEFECT_CLASSES.items():
                     if class_name == defect_type:
@@ -326,7 +311,6 @@ class DetectionService:
                 if defect_class_id is not None and defect_class_id in DEFECT_COLORS:
                     color = DEFECT_COLORS[defect_class_id]
                 else:
-                    # Default colors if not in config
                     default_colors = [(255, 0, 0), (0, 255, 255), (255, 255, 0), (255, 0, 255), (0, 255, 0)]
                     color = default_colors[hash(defect_type) % len(default_colors)]
                 
@@ -334,30 +318,23 @@ class DetectionService:
                     x, y = bbox['x'], bbox['y']
                     w, h = bbox['width'], bbox['height']
                     
-                    # Draw rectangle (similar to original video processor)
                     cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                    
-                    # Add defect type label (similar to original)
                     cv2.putText(image, defect_type.upper(), (x, y - 5),
                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                 
         except Exception as e:
             self.logger.error(f"Error drawing bounding boxes: {e}")
-            # Import error handling - continue without bounding boxes
     
     def update_thresholds(self, new_thresholds):
         """Update detection thresholds in memory"""
         try:
-            # Validate thresholds
             for key, value in new_thresholds.items():
                 if key in ['anomaly_threshold', 'defect_confidence_threshold']:
                     if not isinstance(value, (int, float)) or not (0 <= value <= 1):
                         raise ValueError(f"Invalid value for {key}: must be between 0 and 1")
             
-            # Update in-memory configuration
             self.config.update(new_thresholds)
-            
-            self.logger.info(f"Thresholds updated in memory: {new_thresholds}")
+            self.logger.info(f"Thresholds updated: {new_thresholds}")
             return True
             
         except Exception as e:
@@ -365,7 +342,7 @@ class DetectionService:
             return False
     
     def get_thresholds(self):
-        """Get current detection thresholds from memory"""
+        """Get current detection thresholds"""
         return {
             'anomaly_threshold': self.config.get('anomaly_threshold', 0.7),
             'defect_confidence_threshold': self.config.get('defect_confidence_threshold', 0.85),
@@ -400,7 +377,7 @@ class DetectionService:
                 'available_gb': round(memory.available / (1024**3), 2),
                 'used_gb': round(memory.used / (1024**3), 2),
                 'percent_used': memory.percent,
-                'mode': 'stateless'
+                'mode': 'stateless_with_openai'
             }
         except ImportError:
             return {
@@ -408,5 +385,5 @@ class DetectionService:
                 'available_gb': 0,
                 'used_gb': 0,
                 'percent_used': 0,
-                'mode': 'stateless'
+                'mode': 'stateless_with_openai'
             }

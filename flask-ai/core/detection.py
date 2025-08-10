@@ -1,6 +1,6 @@
-# core/detection.py
+# core/detection.py - Enhanced with OpenAI 1.x
 """
-Core detection logic for anomaly detection and defect classification
+Core detection logic with OpenAI analysis integration (OpenAI 1.x compatible)
 """
 
 import cv2
@@ -8,16 +8,30 @@ import torch
 import numpy as np
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from openai import OpenAI
+import base64
+import io
+from PIL import Image
 from config import *
 
 
 class DetectionCore:
-    """Core detection functionality"""
+    """Core detection functionality with OpenAI integration"""
     
     def __init__(self, anomalib_model, hrnet_model, device='cuda'):
         self.anomalib_model = anomalib_model
         self.hrnet_model = hrnet_model
         self.device = device
+        
+        # Setup OpenAI 1.x client
+        if OPENAI_API_KEY:
+            self.openai_client = OpenAI(api_key=OPENAI_API_KEY)
+            self.openai_enabled = True
+            print("OpenAI client initialized (1.x)")
+        else:
+            self.openai_client = None
+            self.openai_enabled = False
+            print("Warning: OpenAI API key not found")
         
         # Preprocessing for HRNet
         self.hrnet_transform = A.Compose([
@@ -28,10 +42,7 @@ class DetectionCore:
     
     def detect_anomaly(self, image_path):
         """
-        Step 1: Use Anomalib to detect if product is good or defective
-        
-        Returns:
-            dict: Contains anomaly detection results
+        Layer 1: Anomaly detection with OpenAI analysis
         """
         if not self.anomalib_model:
             raise ValueError("Anomalib model not loaded")
@@ -62,7 +73,7 @@ class DetectionCore:
                 if len(anomaly_mask.shape) > 2:
                     anomaly_mask = anomaly_mask[0]
             
-            return {
+            base_result = {
                 'is_anomalous': is_anomalous,
                 'anomaly_score': anomaly_score,
                 'anomaly_mask': anomaly_mask,
@@ -70,20 +81,21 @@ class DetectionCore:
                 'decision': 'DEFECT' if (is_anomalous and anomaly_score > ANOMALY_THRESHOLD) else 'GOOD'
             }
             
+            # OpenAI Layer 1 Analysis - ALWAYS RUN FOR TESTING
+            if self.openai_enabled:
+                print(f"Running OpenAI anomaly analysis (score: {anomaly_score:.3f})")
+                openai_analysis = self._analyze_anomaly_with_openai(image_path, base_result)
+                base_result['openai_analysis'] = openai_analysis
+            
+            return base_result
+            
         except Exception as e:
             print(f"Error in anomaly detection: {e}")
             return None
     
     def classify_defects(self, image_path, region_mask=None):
         """
-        Step 2: Use HRNet to classify specific defect types
-        
-        Args:
-            image_path: Path to image
-            region_mask: Optional mask to focus on specific regions
-            
-        Returns:
-            dict: Contains defect classification results
+        Layer 2: Defect classification with OpenAI analysis
         """
         if not self.hrnet_model:
             raise ValueError("HRNet model not loaded")
@@ -99,9 +111,7 @@ class DetectionCore:
             
             # Apply region mask if provided
             if region_mask is not None:
-                # Resize mask to match image
                 region_mask = cv2.resize(region_mask, (original_size[1], original_size[0]))
-                # Apply mask to image
                 masked_image = image_rgb.copy()
                 masked_image[region_mask < 0.5] = 0
                 image_rgb = masked_image
@@ -128,7 +138,7 @@ class DetectionCore:
             # Analyze defect predictions
             defect_analysis = self._analyze_defect_predictions(predicted_mask, confidence_scores)
             
-            return {
+            base_result = {
                 'predicted_mask': predicted_mask,
                 'confidence_scores': confidence_scores,
                 'defect_analysis': defect_analysis,
@@ -137,9 +147,204 @@ class DetectionCore:
                 'class_distribution': defect_analysis['class_distribution']
             }
             
+            # OpenAI Layer 2 Analysis - ALWAYS RUN IF ENABLED
+            if self.openai_enabled:
+                print(f"Running OpenAI defect analysis")
+                openai_analysis = self._analyze_defects_with_openai(image_path, base_result)
+                base_result['openai_analysis'] = openai_analysis
+            
+            return base_result
+            
         except Exception as e:
             print(f"Error in defect classification: {e}")
             return None
+    
+    def _analyze_anomaly_with_openai(self, image_path, anomaly_result):
+        """OpenAI analysis for Layer 1 (Anomaly Detection) - 1.x compatible"""
+        try:
+            if not self.openai_client:
+                return {
+                    'analysis': 'OpenAI client not initialized',
+                    'confidence_percentage': 0,
+                    'error': 'No OpenAI client'
+                }
+            
+            # Encode image to base64
+            image_base64 = self._encode_image_to_base64(image_path)
+            
+            prompt = f"""Analyze this product image for quality control.
+            
+Model Results:
+- Anomaly Score: {anomaly_result['anomaly_score']:.3f}
+- Decision: {anomaly_result['decision']}
+- Threshold: {anomaly_result['threshold_used']}
+
+Provide analysis on:
+1. Visual quality assessment
+2. Confidence in model decision (percentage)
+3. Key observations
+4. Recommendation
+
+Be concise and technical."""
+
+            print("Calling OpenAI API...")
+            response = self.openai_client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                        ]
+                    }
+                ],
+                max_tokens=OPENAI_MAX_TOKENS,
+                temperature=OPENAI_TEMPERATURE
+            )
+            
+            analysis_text = response.choices[0].message.content
+            confidence = self._extract_confidence_percentage(analysis_text)
+            
+            print(f"OpenAI analysis completed - confidence: {confidence}%")
+            
+            return {
+                'analysis': analysis_text,
+                'confidence_percentage': confidence,
+                'model_used': OPENAI_MODEL,
+                'layer': 'anomaly_detection'
+            }
+            
+        except Exception as e:
+            print(f"OpenAI anomaly analysis error: {e}")
+            return {
+                'analysis': f'OpenAI analysis failed: {str(e)}',
+                'confidence_percentage': 0,
+                'error': str(e)
+            }
+    
+    def _analyze_defects_with_openai(self, image_path, defect_result):
+        """OpenAI analysis for Layer 2 (Defect Classification) with bounding box validation - 1.x compatible"""
+        try:
+            if not self.openai_client:
+                return {
+                    'analysis': 'OpenAI client not initialized',
+                    'confidence_percentage': 0,
+                    'error': 'No OpenAI client'
+                }
+            
+            image_base64 = self._encode_image_to_base64(image_path)
+            
+            detected_defects = defect_result['detected_defects']
+            bounding_boxes = defect_result.get('bounding_boxes', {})
+            
+            # Create visual prompt with bounding box information
+            bbox_info = ""
+            for defect_type, boxes in bounding_boxes.items():
+                bbox_info += f"\n{defect_type}: {len(boxes)} regions detected"
+                for i, bbox in enumerate(boxes[:3]):  # Limit to first 3 boxes per type
+                    bbox_info += f"\n  - Region {i+1}: x={bbox['x']}, y={bbox['y']}, w={bbox['width']}, h={bbox['height']}"
+            
+            prompt = f"""Analyze this product image with detected defects and their bounding box locations.
+
+DETECTED DEFECTS: {', '.join(detected_defects) if detected_defects else 'None detected'}
+BOUNDING BOX LOCATIONS:{bbox_info if bbox_info else ' None'}
+
+DEFECT CLASSES: {list(SPECIFIC_DEFECT_CLASSES.values())}
+
+Provide analysis on:
+1. Visual quality assessment
+2. Defect severity if any (Minor/Moderate/Significant/Critical)
+3. Confidence in detection accuracy (percentage)
+4. Spatial accuracy of bounding boxes if present (percentage)
+5. Overall product quality recommendation
+
+Be specific and technical."""
+
+            print("Calling OpenAI API for defect analysis...")
+            response = self.openai_client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                        ]
+                    }
+                ],
+                max_tokens=OPENAI_MAX_TOKENS,
+                temperature=OPENAI_TEMPERATURE
+            )
+            
+            analysis_text = response.choices[0].message.content
+            confidence = self._extract_confidence_percentage(analysis_text)
+            bbox_confidence = self._extract_bbox_confidence(analysis_text)
+            
+            print(f"OpenAI defect analysis completed - confidence: {confidence}%")
+            
+            return {
+                'analysis': analysis_text,
+                'confidence_percentage': confidence,
+                'bbox_validation': {
+                    'confidence': bbox_confidence,
+                    'validated_regions': len(bounding_boxes),
+                    'spatial_accuracy': 'high' if bbox_confidence > 80 else 'medium' if bbox_confidence > 60 else 'low'
+                },
+                'model_used': OPENAI_MODEL,
+                'layer': 'defect_classification',
+                'defects_analyzed': detected_defects,
+                'bounding_boxes_analyzed': {k: len(v) for k, v in bounding_boxes.items()}
+            }
+            
+        except Exception as e:
+            print(f"OpenAI defect analysis error: {e}")
+            return {
+                'analysis': f'OpenAI analysis failed: {str(e)}',
+                'confidence_percentage': 0,
+                'bbox_validation': {'confidence': 0, 'error': str(e)},
+                'error': str(e)
+            }
+    
+    def _encode_image_to_base64(self, image_path):
+        """Encode image to base64 for OpenAI"""
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode('utf-8')
+    
+    def _extract_confidence_percentage(self, text):
+        """Extract general confidence percentage from OpenAI response"""
+        import re
+        matches = re.findall(r'(\d+)%', text)
+        if matches:
+            return max([int(match) for match in matches])
+        return 75  # Default confidence
+    
+    def _extract_bbox_confidence(self, text):
+        """Extract bounding box confidence from OpenAI response"""
+        import re
+        
+        # Look for bounding box specific confidence patterns
+        bbox_patterns = [
+            r'bounding box.*?(\d+)%',
+            r'spatial.*?(\d+)%',
+            r'location.*?(\d+)%',
+            r'bbox.*?(\d+)%'
+        ]
+        
+        confidences = []
+        for pattern in bbox_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            confidences.extend([int(match) for match in matches])
+        
+        if confidences:
+            return max(confidences)
+        
+        # Fallback to general confidence if no bbox-specific found
+        general_matches = re.findall(r'(\d+)%', text)
+        if general_matches:
+            return max([int(match) for match in general_matches])
+        
+        return 75  # Default confidence
     
     def _analyze_defect_predictions(self, predicted_mask, confidence_scores):
         """Analyze HRNet predictions to extract defect information"""

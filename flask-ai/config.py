@@ -1,26 +1,30 @@
-# config.py - Stateless Version
+# config.py - Enhanced with OpenAI Support (TESTING MODE)
 """
-Stateless Configuration file for Unified Defect Detection System
-No file operations, only in-memory configuration
+Configuration file for Unified Defect Detection System with OpenAI integration
+TESTING MODE: Lower thresholds for better sensitivity
 """
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Base paths (for model loading only, no outputs)
+# Load environment variables
+load_dotenv()
+
+# Base paths
 BASE_DIR = Path(__file__).parent
 MODELS_DIR = BASE_DIR / "models"
 
-# Model paths (only for loading models)
+# Model paths
 ANOMALIB_MODEL_PATH = MODELS_DIR / "patchcore.pt"
 HRNET_MODEL_PATH = MODELS_DIR / "defect_segmentation_model.pth"
 
-# Detection thresholds (can be updated in-memory)
-ANOMALY_THRESHOLD = 0.7
-DEFECT_CONFIDENCE_THRESHOLD = 0.85
+# Detection thresholds - LOWERED FOR TESTING
+ANOMALY_THRESHOLD = 0.3  # Lowered from 0.7 - more sensitive
+DEFECT_CONFIDENCE_THRESHOLD = 0.6  # Lowered from 0.85 - less strict
 
 # Device configuration
-DEVICE = 'cuda'  # or 'cpu'
+DEVICE = 'cuda'
 
 # Enhanced defect detection classes
 SPECIFIC_DEFECT_CLASSES = {
@@ -33,12 +37,12 @@ SPECIFIC_DEFECT_CLASSES = {
 }
 
 DEFECT_COLORS = {
-    0: (64, 64, 64),     # Dark gray - background
-    1: (255, 0, 0),      # Red - damaged
-    2: (255, 255, 0),    # Yellow - missing component
-    3: (255, 0, 255),    # Magenta - open
-    4: (0, 255, 255),    # Cyan - scratch
-    5: (128, 0, 128),    # Purple - stained
+    0: (64, 64, 64),
+    1: (255, 0, 0),
+    2: (255, 255, 0),
+    3: (255, 0, 255),
+    4: (0, 255, 255),
+    5: (128, 0, 128),
 }
 
 # Image preprocessing settings
@@ -46,24 +50,23 @@ IMAGE_SIZE = (512, 512)
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]
 NORMALIZE_STD = [0.229, 0.224, 0.225]
 
-# Minimum detection thresholds
-MIN_DEFECT_PIXELS = 50
-MIN_DEFECT_PERCENTAGE = 0.005  # 0.5%
-MIN_BBOX_AREA = 100
+# Minimum detection thresholds - LOWERED FOR TESTING
+MIN_DEFECT_PIXELS = 25  # Lowered from 50
+MIN_DEFECT_PERCENTAGE = 0.002  # Lowered from 0.005
+MIN_BBOX_AREA = 50  # Lowered from 100
 
-# Create only models directory (for loading models)
+# OpenAI Configuration
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_MODEL = "gpt-4-turbo"
+OPENAI_MAX_TOKENS = 1000
+OPENAI_TEMPERATURE = 0.1
+
+# Create directories
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-# Stateless mode - no output directories created
+# Stateless mode
 STATELESS_MODE = True
 
-# Debug: Print actual paths for verification
-if __name__ == "__main__":
-    print(f"BASE_DIR: {BASE_DIR}")
-    print(f"MODELS_DIR: {MODELS_DIR}")
-    print(f"ANOMALIB_MODEL_PATH: {ANOMALIB_MODEL_PATH}")
-    print(f"HRNET_MODEL_PATH: {HRNET_MODEL_PATH}")
-    print(f"STATELESS_MODE: {STATELESS_MODE}")
-    print(f"Model files exist:")
-    print(f"  Anomalib: {ANOMALIB_MODEL_PATH.exists()}")
-    print(f"  HRNet: {HRNET_MODEL_PATH.exists()}")
+print("TESTING MODE: Using lowered thresholds for better sensitivity")
+print(f"   ANOMALY_THRESHOLD: {ANOMALY_THRESHOLD}")
+print(f"   DEFECT_CONFIDENCE_THRESHOLD: {DEFECT_CONFIDENCE_THRESHOLD}")
